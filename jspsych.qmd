@@ -1,0 +1,352 @@
+---
+title: "Experimente programmieren mit jsPsych"
+author: "Jannis Bosch"
+format: revealjs
+embed-resources: true
+---
+
+# Welche Programme benötigen wir?
+
+## Node.js / Node Package Manager
+
+-   Programm, um Javascript Bibliotheken über die Kommandozeile dynamisch zu installieren/deinstallieren und die Versionen aktuell zu halten
+
+-   Wird über Shell-Kommandos gesteuert (Skriptsprache, die für Interaktionen mit dem OS verwendet wird)
+
+[Node.js](https://nodejs.org/){.external target="_blank"}
+
+## Visual Studio Code
+
+-   Code Editor mit Highlighting für verschiedene Programmiersprachen (u.A. JavaScript)
+
+[Visual Studio](https://code.visualstudio.com/){.external target="_blank"}
+
+## jsPsych
+
+-   jsPsych ist eine JavaScript-Bibliothek zur Erstellung von (psychologischen) Online-Experimenten
+
+-   jsPsych ist modular aufgebaut und ermöglicht die Nutzung vordefinierter Module (z.B. Modul für Videodarbietung mit Button-Reaktion) aber auch die Erstellung eigener Module
+
+-   jsPsych wurde mit der Zeit auch für die Nutzung mit Node.js optimiert
+
+[jsPsych](https://www.jspsych.org){.external target="_blank"}
+
+## jsPsych-Builder
+
+-   Anwendung, die viele Schritte bei der Experimenterstellung für jsPsych automatisiert
+
+    -   Erstellung einer Basis-Datei und einer festen Ordnerstruktur mit Pre-load Funktionen
+
+    -   Aufsetzen eines lokalen Servers zur Testung des Experiments
+
+    -   Bundling des Experiments
+
+-   Beinhaltet z.B. [Webpack](https://webpack.js.org/){.external target="_blank"} (bundler) und [Babel](https://babeljs.io/){.external target="_blank"} (Kompiliersprache für JS)
+
+[jsPsych Builder (Github)](https://github.com/bjoluc/jspsych-builder){.external target="_blank"}
+
+# Installation und Initialisierung
+
+## Ein neues Projekt in VSC anlegen
+
+1.  Node.js und Visual Studio Code installieren
+
+2.  Neuen Ordner für das Experiment erstellen und mit VSC öffnen (File -\> Open Folder)
+
+## Shell?
+
+3.  PowerShell in VSC öffnen (Terminal -\> New Terminal)
+
+    -   Einfache Shell-Befehle:
+
+``` PowerShell
+  cd .
+  cd ..
+  mkdir NeuerOrdner
+  cd NeuerOrdner
+```
+
+```         
+Nicht vergessen zurück in den richtigen Ordner zu navigieren!
+```
+
+## jsPsych-Builder initialisieren
+
+4.  Installation des jsPsych-Builder über node.js <br>(Achtet darauf, dass ihr in der Shell im richtigen Ordner seid!)
+
+``` PowerShell
+  npx jspsych-builder init
+  # Entspricht ungefähr der Installation eines Pakets über CRAN in RStudio
+```
+
+Bei Problemen:
+
+``` PowerShell
+  npm install -g npm
+```
+
+<br> 5. Wenn es funktioniert: Installation bestätigen und Name und Beschreibung eingeben
+
+# Die Entwicklungsumgebung steht!
+
+## Die Ordnerstruktur
+
+Veränderbare Ordner:
+
+-   src: Ordner für die Experiment-Files (source), die den eigentlichen Code enthalten
+-   assets: Ordner für externe Dateien, z.B. Bilder, Videos, Audios, etc.
+-   styles: Ordner für globale style-Dateien (\*.css, \*.scss, usw.). Diese können z.B. genutzt werden um auf jeder Seite rechts oben das Uni-Logo einzublenden oder den style aller Buttons zu verändern.
+
+------------------------------------------------------------------------
+
+Weitere Ordner:
+
+-   node_modules: Standard Node.js-Ordner, der alle Bibliotheken (dependencies) beinhaltet
+-   .jspsych-builder: Ordner, der die kompilierten Dateien für den lokalen Server beinhaltet (wird automatisch aktualisiert)
+-   bundle: Ordner, der später die gebundleten Dateien beinhaltet
+-   package.json und package-lock.json beinhalten Informationen über installierte Packages für NPM
+
+## Aufbau der Datei experiment.js
+
+Titel, Version, usw.
+
+``` JavaScript
+  /**
+ * @title Texperiment
+ * @description Test
+ * @version 0.1.0
+ *
+ * @assets assets/
+ */
+```
+
+## Aufbau der Datei experiment.js
+
+Importieren von Scripts, Modulen, etc.
+
+``` JavaScript
+// Stylesheets importieren (.scss or .css).
+import "../styles/main.scss";
+
+// Plugins importieren (erst installieren!)
+import FullscreenPlugin from "@jspsych/plugin-fullscreen";
+import HtmlKeyboardResponsePlugin from "@jspsych/plugin-html-keyboard-response";
+import PreloadPlugin from "@jspsych/plugin-preload";
+
+// Import der Hauptfunktion für das Experiment (einfach nicht ändern)
+import { initJsPsych } from "jspsych";
+```
+
+## Aufbau der Datei experiment.js
+
+``` JavaScript
+/**
+ * This function will be executed by jsPsych Builder and is expected to run the jsPsych experiment
+ *
+ * @type {import("jspsych-builder").RunFunction}
+ */
+export async function run({ assetPaths, input = {}, environment, title, version }) {
+  const jsPsych = initJsPsych();
+
+  // Hier wird die Timeline deklariert. Alle trials werden mit timeline.push() angehängt.
+  const timeline = [];
+
+  // Dateien Preloaden mit dem PreloadPlugin
+  timeline.push({
+    type: PreloadPlugin,
+    images: assetPaths.images,
+    audio: assetPaths.audio,
+    video: assetPaths.video,
+  });
+
+  // Welcome screen mit dem Keyboard Response Plugin
+  timeline.push({
+    type: HtmlKeyboardResponsePlugin,
+    stimulus: "<p>Welcome to Texperiment!<p/>",
+  });
+
+  // Switch to fullscreen mit Fullscreen Plugin
+  timeline.push({
+    type: FullscreenPlugin,
+    fullscreen_mode: true,
+  });
+
+  // Hier wird die Variable timeline dann ausgeführt und damit das Experiment gestartet
+  await jsPsych.run(timeline);
+
+  // Die Variable jsPsych beinhaltet alle gespeicherten Daten. Die Ausgabe dieser Funktion wird am Ende des Experiments
+  // vergleichbar mit der print()-Funktion in R auf eine leere Seite abgedruckt 
+  return jsPsych;
+}
+```
+
+# Probieren wir das mal aus
+
+## Der Test-Server
+
+-   Gebt jetzt folgenden Befehl in die Shell ein, um einen lokalen Testserver zu starten
+
+``` PowerShell
+  npm start
+```
+
+-   Besucht die Seite [localhost:3000](localhost:3000){.external target="_blank"}, um euer Experiment auszuprobieren
+
+-   Wenn ihr Änderungen speichert, wird die Seite automatisch aktualisiert (Strg+C zum Beenden)
+
+# Eigene Experimente erstellen
+
+## Die timeline
+
+-   timeline-Elemente werden nacheinander ausgeführt
+
+``` JavaScript
+  // Hier wird die Timeline deklariert. 
+  const timeline = []; 
+  
+  // Zwischendrin können Elemente an die timeline angehängt werden
+  timeline.push({
+    type: HtmlKeyboardResponsePlugin,
+    stimulus: "<p>Welcome to Texperiment!<p/>",
+  });
+  
+  // Hier wird die Variable timeline dann ausgeführt und damit das Experiment gestartet
+  await jsPsych.run(timeline);
+```
+
+## Die timeline
+
+-   timeline-Elemente können auch zunächst als Variable gespeichert und später angehängt werden
+
+``` JavaScript
+  const timeline = []; 
+  
+  var welcome = {
+    type: HtmlKeyboardResponsePlugin,
+    stimulus: "<p>Welcome to Texperiment!<p/>",
+  };
+  
+  timeline.push(welcome)
+  
+  await jsPsych.run(timeline);
+```
+
+-   Dieser Weg ist z.B. hilfreich wenn man verschiedene Varianten bzw. Reihenfolgen festlegen möchte
+
+## jsPsych-Plugins
+
+-   Wir haben im Template des jspsych-Builder bereits drei Plugins kennengelernt:
+
+    -   Das Preload Plugin
+    -   Das Keyboard Response Plugin
+    -   Das Fullscreen Plugin
+
+-   Es gibt aber noch einige andere Plugins (und man kann auch eigene Plugins erstellen)
+
+-   Besucht jetzt [www.jspsych.org](https://www.jspsych.org/){.external target="_blank"} und klickt auf den Reiter Plugins
+
+## jsPsych-Plugins
+
+-   Jedes offizielle Plugin hat eine Hilfeseite
+
+-   Auf der Hilfeseite findet man jeweils:
+
+    -   eine kurze Beschreibung
+    -   input Parameter
+    -   automatisch gespeicherte Daten
+    -   Informationen zur Installation
+    -   Beispiele
+
+## jsPsych-Plugins installieren
+
+-   Neue Plugins müssen zunächst über npm installiert werden (vergleichbar mit R-Bibliotheken in RStudio)
+
+-   Die Installation läuft über die Shell
+
+-   Probieren wir das mal aus für das html-button-response plugin
+
+## Das html-button-response Plugin installieren
+
+-   Auf der Hilfeseite gibt es Informationen für die Installation
+
+-   Wir arbeiten mit npm und brauchen deswegen die beiden Zeilen unter Using NPM
+
+Installation in der Shell:
+
+``` PowerShell
+  npm install @jspsych/plugin-html-button-response
+```
+
+## Das html Button-response Plugin installieren
+
+Teil 2 gehört in den Teil zu Plugins in experiment.js:
+
+``` {.JavaScript code-line-numbers="8"}
+// Stylesheets importieren (.scss or .css).
+import "../styles/main.scss";
+
+// Plugins importieren (erst installieren!)
+import FullscreenPlugin from "@jspsych/plugin-fullscreen";
+import HtmlKeyboardResponsePlugin from "@jspsych/plugin-html-keyboard-response";
+import PreloadPlugin from "@jspsych/plugin-preload";
+import htmlButtonResponse from '@jspsych/plugin-html-button-response';
+
+// Import der Hauptfunktion für das Experiment (einfach nicht ändern)
+import { initJsPsych } from "jspsych";
+```
+
+# Jetzt können wir das html-button-response Plugin nutzen
+
+------------------------------------------------------------------------
+
+``` {.JavaScript code-line-numbers="32-37"}
+/**
+ * This function will be executed by jsPsych Builder and is expected to run the jsPsych experiment
+ *
+ * @type {import("jspsych-builder").RunFunction}
+ */
+export async function run({ assetPaths, input = {}, environment, title, version }) {
+  const jsPsych = initJsPsych();
+
+  // Hier wird die Timeline deklariert. Alle trials werden mit timeline.push() angehängt.
+  const timeline = [];
+
+  // Dateien Preloaden mit dem PreloadPlugin
+  timeline.push({
+    type: PreloadPlugin,
+    images: assetPaths.images,
+    audio: assetPaths.audio,
+    video: assetPaths.video,
+  });
+
+  // Welcome screen mit dem Keyboard Response Plugin
+  timeline.push({
+    type: HtmlKeyboardResponsePlugin,
+    stimulus: "<p>Welcome to Texperiment!<p/>",
+  });
+
+  // Switch to fullscreen mit Fullscreen Plugin
+  timeline.push({
+    type: FullscreenPlugin,
+    fullscreen_mode: true,
+  });
+  
+    timeline.push({
+    type: htmlButtonResponse,  // Hier wird das Plugin definiert
+    stimulus: `Ich bin der Stimulus</br></br>Und ich akzeptiere HTML-Befehle`, // Hier wird der Stimulus definiert
+    choices: [`Fortfahren`], // Hier können die Antwort-Buttons beschriftet werden
+    prompt: `<div style='font-size: 28pt'>Das steht unter dem Stimulus</div>` // Hier kann ein Prompt unter dem Button generiert werden
+  })
+
+  // Hier wird die Variable timeline dann ausgeführt und damit das Experiment gestartet
+  await jsPsych.run(timeline);
+
+  // Die Variable jsPsych beinhaltet alle gespeicherten Daten. Die Ausgabe dieser Funktion wird am Ende des Experiments
+  // vergleichbar mit der print()-Funktion in R auf eine leere Seite abgedruckt 
+  return jsPsych;
+}
+```
+
+# Das waren die Grundlagen
+
+# Jetzt können wir uns gemeinsam ein kleines Experiment überlegen
